@@ -3,7 +3,10 @@ name = "xerde"
 version = "0.1.0"
 authors = ["Ezequiel Ramis <ezequielramis.hello@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "XML support for serde"
+repository = "https://github.com/EzequielRamis/xerde/"
+keywords = ["xml", "serde", "parser", "sax", "pest"]
+categories = ["encoding", "parser-implementations"]
 
 [dependencies]
