@@ -1,0 +1,283 @@
+//   specification: https://www.w3.org/TR/xml/
+//   last modification: 7 february 2013
+ 
+//   document
+//      [1]
+        document = @{ SOI ~ prolog ~ element ~ misc* ~ EOI}
+
+//   character range
+//      [2]
+        char = @{ !("\u{fffe}" | "\u{ffff}") ~ ANY }
+
+//   white space
+//      [3]
+        WHITESPACE = _{ ("\u{20}" | "\u{09}" | "\u{0d}" | "\u{0a}")+ }
+
+//   names and tokens
+//      [4]
+        name_start_char = {
+                ":" |
+                ASCII_ALPHA |
+                "_" |
+                ('\u{c0}'..'\u{d6}') |
+                ('\u{d8}'..'\u{f6}') |
+                ('\u{f8}'..'\u{2ff}') |
+                ('\u{370}'..'\u{37d}') |
+                ('\u{37f}'..'\u{1fff}') |
+                ('\u{200c}'..'\u{200d}') |
+                ('\u{2070}'..'\u{218f}') |
+                ('\u{2c00}'..'\u{2fef}') |
+                ('\u{3001}'..'\u{d7ff}') |
+                ('\u{f900}'..'\u{fdcf}') |
+                ('\u{fdf0}'..'\u{fffd}') |
+                ('\u{10000}'..'\u{effff}')
+        }
+//      [4a]
+        name_char = {
+                name_start_char |
+                "-" |
+                "." | 
+                ASCII_DIGIT |
+                "\u{b7}" |
+                ('\u{0300}'..'\u{036f}') |
+                ('\u{203f}'..'\u{2040}')
+        }
+//      [5]
+        name = @{ name_start_char ~ name_char* }
+//      [6]
+        names = @{ name ~ ("\u{20}" ~ name)* }
+//      [7]
+        nmtoken = @{ name_char+ }
+//      [8]
+        nmtokens = @{ nmtoken ~ ("\u{20}" ~ nmtoken)* }
+
+//   literals
+//      [9]
+        entity_value = @{
+                ("\"" ~ ( (!( "%" | "&" | "\"" ) ~ char) | pe_reference | reference )* ~ "\"" ) |
+                ("'" ~ ( (!( "%" | "&" | "'" ) ~ char) | pe_reference | reference )* ~ "'" )
+        }
+//      [10]
+        att_value = @{
+                ( "\"" ~ ( (!( "<" | "&" | "\"" ) ~ char) | reference )* ~ "\"" ) |
+                ( "'" ~ ( (!( "<" | "&" | "'" ) ~ char) | reference )* ~ "'" )
+        }
+//      [11]
+        system_literal = @{
+                ( "\"" ~ !("\"")* ~ "\"" ) |
+                ( "'" ~ !("'")* ~ "'" )
+        }
+//      [12]
+        pubid_literal = @{
+                ( "\"" ~ pubid_char* ~ "\"" ) |
+                ( "'" ~ (pubid_char ~ !"'")* ~ "'" )
+        }
+//      [13]
+        pubid_char = {
+                "\u{20}" |
+                "\u{0d}" |
+                "\u{0a}" |
+                ASCII_ALPHANUMERIC |
+                ( "-" | "'" | "(" | ")" | "+" | "," | "." | "/" | ":" | "=" | "?" | ";" | "!" | "*" | "#" | "@" | "$" | "_" | "%" )
+        }
+
+//   character data
+//      [14]
+        char_data = @{ !( "<" | "&")* ~ !( !( "<" | "&")* ~ "]]>" ~ !( "<" | "&")* ) }
+
+//   comments
+//      [15]
+        comment = @{ "<!--" ~ ( (char ~ !"-") | ("-" ~ (char ~ !"-") ) )* ~ "-->" }
+//      [16]
+        pi = @{ "<?" ~ pi_target ~ (WHITESPACE ~ (char* ~ !(char* ~ "?>" ~ char*) ) )? ~ "?>" }
+//      [17]
+        pi_target = @{ name ~ !( ("X" | "x") ~ ("M" | "m") ~ ("L" | "l") ) }
+
+//   cdata sections
+//      [18]
+        cd_sect = @{ cd_start ~ cdata ~ cd_end }
+//      [19]
+        cd_start = {"<![CDATA["}
+//      [20]
+        cdata = @{ char* ~ !(char* ~ "]]>" ~ char*) }
+//      [21]
+        cd_end = {"]]>"}
+
+//   prolog
+//      [22]
+        prolog = @{ xml_decl? ~ misc* ~ (doctypedecl ~ misc*)? }
+//      [23]
+        xml_decl = @{ "<?xml" ~ version_info ~ encoding_decl? ~ sd_decl? ~ WHITESPACE? ~ "?>" }
+//      [24]
+        version_info = @{ WHITESPACE ~ "version" ~ eq ~ ( ("'" ~ version_num ~ "'") | ("\"" ~ version_num ~ "\"") ) }
+//      [25]
+        eq = @{ WHITESPACE? ~ "=" ~ WHITESPACE? }
+//      [26]
+        version_num = @{"1." ~ ASCII_DIGIT+}
+//      [27]
+        misc = {comment | pi | WHITESPACE}
+
+//   document type definition
+//      [28]
+        doctypedecl = @{ "<!DOCTYPE" ~ WHITESPACE ~ name ~ (WHITESPACE ~ external_id)? ~ WHITESPACE? ~ ("[" ~ int_subset ~ "]" ~ WHITESPACE?)? ~ ">" }
+//      [28a]
+        decl_sep = {pe_reference | WHITESPACE}
+//      [28b]
+        int_subset = @{ (markupdecl | decl_sep)* }
+//      [29]
+        markupdecl = { elementdecl | attlist_decl | entity_decl | notation_decl | pi | comment }
+
+//   external subset
+//      [30]
+        ext_subset = @{ text_decl? ~ ext_subset_decl }
+//      [31]
+        ext_subset_decl = {( markupdecl | conditional_sect | decl_sep )*}
+
+//   standalone document declaration
+//      [32]
+        sd_decl = @{ WHITESPACE ~ "standalone" ~ eq ~ ( ("'" ~ ("yes" | "no") ~ "'") | ("\"" ~ ("yes" | "no") ~ "\"") ) }
+
+//   element
+//      [39]
+        element = @{ empty_elem_tag | (s_tag ~ content ~ e_tag) }
+
+//   start-tag
+//      [40]
+        s_tag = @{ "<" ~ name ~ (WHITESPACE ~ attribute)* ~ WHITESPACE? ~ ">" }
+//      [41]
+        attribute = @{ name ~ eq ~ att_value }
+
+//   end-tag
+//      [42]
+        e_tag = @{ "</" ~ name ~ WHITESPACE? ~ ">" }
+
+//   content of elements
+//      [43]
+        content = @{ char_data? ~ ( (element | reference | cd_sect | pi | comment) ~ char_data? )* }
+
+//   tags for empty elements
+//      [44]
+        empty_elem_tag = @{ "<" ~ name ~ (WHITESPACE ~ attribute)* ~ WHITESPACE? ~ "/>" }
+
+//   element type declaration
+//      [45]
+        elementdecl = @{ "<!ELEMENT" ~ WHITESPACE ~ name ~ WHITESPACE ~ contentspec ~ WHITESPACE? ~ ">" }
+//      [46]
+        contentspec = @{ "EMPTY" | "ANY" | mixed | children }
+
+//   element-content models
+//      [47]
+        children = @{ (choice | seq) ~ ("?" | "*" | "+")? }
+//      [48]
+        cp = @{ (name | choice | seq) ~ ("?" | "*" | "+")? }
+//      [49]
+        choice = @{ "(" ~ WHITESPACE? ~ cp ~ ( WHITESPACE? ~ "|" ~ WHITESPACE? ~ cp )+ ~ WHITESPACE? ~ ")" }
+//      [50]
+        seq = @{ "(" ~ WHITESPACE? ~ cp ~ ( WHITESPACE? ~ "," ~ WHITESPACE? ~ cp )* ~ WHITESPACE? ~ ")" }
+
+//   mixed-content declaration
+//      [51]
+        mixed = @{
+                ("(" ~ WHITESPACE? ~ "#PCDATA" ~ (WHITESPACE? ~ "|" ~ WHITESPACE? ~ name)* ~ WHITESPACE? ~ ")*") |
+                ("(" ~ WHITESPACE? ~ "#PCDATA" ~ WHITESPACE? ~ ")")
+        }
+
+//   attribute-list declaration
+//      [52]
+        attlist_decl = @{ "<!ATTLIST" ~ WHITESPACE ~ name ~ att_def* ~ WHITESPACE? ~ ">" }
+//      [53]
+        att_def = @{ WHITESPACE ~ name ~ WHITESPACE ~ att_type ~ WHITESPACE ~ default_decl }
+
+//   attribute types
+//      [54]
+        att_type = { string_type | tokenized_type | enumerated_type }
+//      [55]
+        string_type = {"CDATA"}
+//      [56]
+        tokenized_type = {
+                "ID" |
+                "IDREF" |
+                "IDREFS" |
+                "ENTITY" |
+                "ENTITIES" |
+                "NMTOKEN" |
+                "NMTOKENS"
+        }
+
+//   enumerated attribute types
+//      [57]
+        enumerated_type = {notation_type | enumeration}
+//      [58]
+        notation_type = @{ "NOTATION" ~ WHITESPACE ~ "(" ~ WHITESPACE? ~ name ~ (WHITESPACE? ~ "|" ~ WHITESPACE? ~ name)* ~ WHITESPACE? ~ ")" }
+//      [59]
+        enumeration = @{ "(" ~ WHITESPACE? ~ nmtoken ~ (WHITESPACE? ~ "|" ~ WHITESPACE? ~ nmtoken)* ~ WHITESPACE? ~ ")" }
+
+//   attribute defaults
+//      [60]
+        default_decl = @{ "#REQUIRED" | "#IMPLIED" | (("#FIXED" ~ WHITESPACE)? ~ att_value) }
+
+//   conditional section
+//      [61]
+        conditional_sect = {include_sect | ignore_sect}
+//      [62]
+        include_sect = @{ "<![" ~ WHITESPACE? ~ "INCLUDE" ~ WHITESPACE? ~ "[" ~ ext_subset_decl ~ "]]>" }
+//      [63]
+        ignore_sect = @{ "<![" ~ WHITESPACE? ~ "IGNORE" ~ WHITESPACE? ~ "[" ~ ignore_sect_contents* ~ "]]>" }
+//      [64]
+        ignore_sect_contents = @{ ignore ~ ( "<![" ~ ignore_sect_contents ~ "]]>" ~ ignore )* }
+//      [65]
+        ignore = @{ char* ~ !(char* ~ ("<![" | "]]>") ~ char*) }
+
+//   character reference
+//      [66]
+        char_ref = @{
+                ("&#" ~ ASCII_DIGIT+ ~ ";") |
+                ("&#x" ~ ASCII_ALPHANUMERIC+ ~ ";")
+        }
+
+//   entity reference
+//      [67]
+        reference = {entity_ref | char_ref}
+//      [68]
+        entity_ref = @{"&" ~ name ~ ";"}
+//      [69]
+        pe_reference = @{"%" ~ name ~ ";"}
+
+//   entity declaration
+//      [70]
+        entity_decl = {ge_decl | pe_decl}
+//      [71]
+        ge_decl = @{"<!ENTITY" ~ WHITESPACE ~ name ~ WHITESPACE ~ entity_ref ~ WHITESPACE? ~ ">"}
+//      [72]
+        pe_decl = @{"<!ENTITY" ~ WHITESPACE ~ "%" ~ WHITESPACE ~ name ~ WHITESPACE ~ pe_def ~ WHITESPACE? ~ ">"}
+//      [73]
+        entity_def = @{ entity_value | (external_id ~ n_data_decl?) }
+//      [74]
+        pe_def = {entity_value | external_id}
+
+//   external entity declaration
+//      [75]
+        external_id = @{
+                ("SYSTEM" ~ WHITESPACE ~ system_literal) |
+                ("PUBLIC" ~ WHITESPACE ~ pubid_literal ~ WHITESPACE ~ system_literal)
+        }
+//      [76]
+        n_data_decl = {WHITESPACE ~ "NDATA" ~ WHITESPACE ~ name}
+
+//   text declaration
+//      [77]
+        text_decl = @{"<?xml" ~ version_info? ~ encoding_decl ~ WHITESPACE? ~ "?>"}
+//      [78]
+        ext_parsed_ent = @{text_decl? ~ content}
+
+//   encoding declaration
+//      [80]
+        encoding_decl = @{WHITESPACE ~ "encoding" ~ eq ~ ("\"" ~ enc_name ~ "\"" | "'" ~ enc_name ~ "'")}
+//      [81]
+        enc_name = {ASCII_ALPHA ~ ( ASCII_ALPHANUMERIC | "." | "_" | "-" )*}
+
+//   notation declaration
+//      [82]
+        notation_decl = @{ "<!NOTATION" ~ WHITESPACE ~ name ~ WHITESPACE ~ (external_id | public_id) ~ WHITESPACE? ~ ">" }
+//      [83]
+        public_id = @{"PUBLIC" ~ WHITESPACE ~ pubid_literal}

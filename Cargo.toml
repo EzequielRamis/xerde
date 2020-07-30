@@ -10,3 +10,6 @@ keywords = ["xml", "serde", "parser", "sax", "pest"]
 categories = ["encoding", "parser-implementations"]
 
 [dependencies]
+pest = "2.1.3"
+pest_derive = "2.1.0"
+serde = "1.0.114"
