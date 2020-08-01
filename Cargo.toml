@@ -13,3 +13,6 @@ categories = ["encoding", "parser-implementations"]
 pest = "2.1.3"
 pest_derive = "2.1.0"
 serde = "1.0.114"
+
+[dev-dependencies]
+test-case = "1.0.0"
